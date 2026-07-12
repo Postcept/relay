@@ -1,0 +1,38 @@
+name: Publish
+
+# Publishes to npm on a GitHub release using trusted publishing (OIDC), so there
+# is no token to store. Pin the actions below to commit SHAs before launch.
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - run: npm install
+      - run: npm run build
+      - run: node --test
+      - name: Generate SBOM
+        run: npm sbom --sbom-format cyclonedx --omit dev > sbom.cyclonedx.json
+      - name: Attach SBOM to the release
+        run: gh release upload "${{ github.event.release.tag_name }}" sbom.cyclonedx.json
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - run: npm publish --access public --provenance
+      - name: Pack for attestation
+        run: npm pack --pack-destination dist-pack
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: dist-pack/*.tgz

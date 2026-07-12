@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-postcept-relay
+  labels:
+    app.kubernetes.io/name: postcept-relay
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: 1 # the durable queue is a single PVC. Scale via separate operations, not replicas
+  strategy:
+    type: Recreate # single writer of the queue volume
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: postcept-relay
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: postcept-relay
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: relay
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["run"]
+          env:
+            - name: POSTCEPT_API_URL
+              value: {{ .Values.config.apiUrl | quote }}
+            - name: CONNECTOR
+              value: {{ .Values.config.connector | quote }}
+            - name: EVIDENCE_MODE
+              value: {{ .Values.config.evidenceMode | quote }}
+            - name: RELAY_HEALTH_PORT
+              value: {{ .Values.config.healthPort | quote }}
+            - name: POSTCEPT_RELAY_DATA
+              value: /relay/data
+          # All secrets come from a Secret you manage. None are templated here.
+          envFrom:
+            - secretRef:
+                name: {{ .Values.existingSecret }}
+          ports:
+            - name: health
+              containerPort: {{ .Values.config.healthPort }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            initialDelaySeconds: 5
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            initialDelaySeconds: 5
+            periodSeconds: 15
+          resources: {{ toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: queue
+              mountPath: /relay/data
+      volumes:
+        - name: queue
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-postcept-relay-queue
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+{{- if .Values.persistence.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-postcept-relay-queue
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: {{ .Values.persistence.size }}
+{{- end }}

@@ -1,0 +1,9 @@
+apiVersion: v2
+name: postcept-relay
+description: Customer-side Postcept relay. Reads your system of record locally and submits signed observations. Credentials stay in your cluster.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+home: https://postcept.com
+sources:
+  - https://github.com/Postcept/relay

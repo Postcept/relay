@@ -1,0 +1,31 @@
+{
+  "comment": "Signed by the Postcept API's Python implementation. The relay must reproduce this signature byte-for-byte because Ed25519 is deterministic.",
+  "seed_b64": "KioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKio=",
+  "public_key": "GX9rI+FshTLGq8g4+s1ep4m+DHaykgM0A5v6iz02jWE=",
+  "relay_key_id": "ed25519:GX9rI-FshTLGq8g4",
+  "envelope_unsigned": {
+    "schema_version": "1",
+    "observation_id": "obs_vector_1",
+    "operation_id": "op_vector_1",
+    "org_id": "org_vector",
+    "relay_id": "rly_vector",
+    "connector": "stripe",
+    "connector_version": "0.1.0",
+    "observed_at": "2026-07-12T00:00:00Z",
+    "nonce": "vector-nonce-0123456789abcdef",
+    "facts": {
+      "exists": true,
+      "refund_id": "re_4md82k",
+      "charge_id": "ch_1P09x",
+      "amount_cents": 12000,
+      "currency": "usd",
+      "customer": "mara.ellis@example.com",
+      "status": "succeeded",
+      "operation_ref": "op_vector_1",
+      "duplicate_refund_ids": [],
+      "duplicates_available": true
+    },
+    "relay_key_id": "ed25519:GX9rI-FshTLGq8g4"
+  },
+  "signature": "B33kQIbaI4Z4DwDkDPZCiSGjR7DAAAd9+qFWTh5Hc9QlwKH2qNmuvOXT61IUp0tcLnX/mMwidDTKDqtbdEg6Dg=="
+}

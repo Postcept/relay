@@ -1,0 +1,32 @@
+# Helm values for the relay. No Service or Ingress is created. The relay only
+# dials out. Secrets come from a Kubernetes Secret you manage, so the signing
+# seed and provider credentials never appear in this file.
+
+image:
+  repository: ghcr.io/postcept/relay
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+# Non-secret configuration.
+config:
+  apiUrl: https://api.postcept.com
+  connector: mock # mock | stripe
+  evidenceMode: full # full | minimal
+  healthPort: 8477
+
+# Name of a pre-existing Secret with these keys (do NOT put secrets in values):
+#   POSTCEPT_API_KEY, POSTCEPT_ORG_ID, POSTCEPT_RELAY_ID, POSTCEPT_RELAY_SEED
+#   STRIPE_API_KEY   (only when connector=stripe, a restricted read-only key)
+existingSecret: postcept-relay-secrets
+
+# Durable queue: a small PVC so signed observations survive a pod restart.
+persistence:
+  enabled: true
+  size: 1Gi
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    memory: 128Mi
