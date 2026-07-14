@@ -31,7 +31,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
       - run: npm publish --access public --provenance
       - name: Pack for attestation
-        run: npm pack --pack-destination dist-pack
+        run: |
+          mkdir -p dist-pack
+          npm pack --pack-destination dist-pack
       - name: Attest build provenance
         uses: actions/attest-build-provenance@ef244123eb79f2f7a7e75d99086184180e6d0018 # v1
         with:

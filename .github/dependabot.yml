@@ -1,0 +1,14 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+  # The release workflow holds the publishing identity, so a stale or hijacked
+  # action is the highest-value target in this repo. Actions are pinned to commit
+  # SHAs, which means they only move when Dependabot proposes it.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
