@@ -35,7 +35,7 @@ STRIPE_API_KEY=stripe-readonly-key:latest
 Notes:
 - `--no-cpu-throttling` keeps the flush loop running between requests.
 - The queue lives on the container filesystem. On Cloud Run that filesystem is ephemeral, so a
-  cold start can lose not-yet-flushed observations. For durability across
+  restart can lose not-yet-flushed observations. For durability across
   restarts, mount a volume (Cloud Run + a filestore/GCS-FUSE mount) or run on a
   host with a persistent disk (the Helm chart uses a PVC).
 - `/healthz` on `RELAY_HEALTH_PORT` (default 8477) reports queue depth and

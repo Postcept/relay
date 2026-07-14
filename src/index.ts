@@ -71,7 +71,7 @@ async function cmdKeygen(): Promise<void> {
   const seedB64 = seed.toString("base64");
   const publicKey = await publicKeyFromSeed(seedB64);
   const publicB64 = Buffer.from(publicKey).toString("base64");
-  console.log("Generated a relay keypair. The seed stays with you; register only the public half.\n");
+  console.log("Generated a relay keypair. The seed stays with you. Register only the public half.\n");
   console.log(`POSTCEPT_RELAY_SEED=${seedB64}   # secret, store in your secret manager`);
   console.log(`public_key=${publicB64}`);
   console.log(`key_id=${keyIdFor(publicKey)}\n`);

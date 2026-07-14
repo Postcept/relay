@@ -47,13 +47,34 @@ export async function publicKeyFromSeed(seedB64: string): Promise<Uint8Array> {
   return ed.getPublicKeyAsync(fromB64(seedB64));
 }
 
+// The signed facts always carry the full schema: every key present, null for a
+// value the relay could not observe. An observer that leaves a key undefined would
+// otherwise drop it from the canonical body, while the control plane fills the same
+// key with null, so the two would sign different bytes. This is what lets a
+// missing-refund observation (exists:false, everything else null) verify.
+export function normalizeFacts(facts: RefundFacts): RefundFacts {
+  return {
+    exists: facts.exists,
+    refund_id: facts.refund_id ?? null,
+    charge_id: facts.charge_id ?? null,
+    amount_cents: facts.amount_cents ?? null,
+    currency: facts.currency ?? null,
+    customer: facts.customer ?? null,
+    status: facts.status ?? null,
+    operation_ref: facts.operation_ref ?? null,
+    duplicate_refund_ids: facts.duplicate_refund_ids ?? [],
+    duplicates_available: facts.duplicates_available ?? true,
+  };
+}
+
 export async function signEnvelope(
   unsigned: Omit<ObservationEnvelope, "signature">,
   seedB64: string
 ): Promise<ObservationEnvelope> {
-  const body = new TextEncoder().encode(canonicalize(unsigned));
+  const normalized = { ...unsigned, facts: normalizeFacts(unsigned.facts) };
+  const body = new TextEncoder().encode(canonicalize(normalized));
   const signature = await ed.signAsync(body, fromB64(seedB64));
-  return { ...unsigned, signature: b64(signature) };
+  return { ...normalized, signature: b64(signature) };
 }
 
 export interface ObserveInput {
