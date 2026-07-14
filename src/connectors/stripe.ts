@@ -8,7 +8,7 @@
 
 import type { RefundFacts } from "../envelope.js";
 
-const STRIPE_API = "https://api.stripe.com";
+const STRIPE_API = process.env.STRIPE_API_BASE ?? "https://api.stripe.com";
 
 interface StripeRefund {
   id: string;
@@ -30,6 +30,39 @@ async function stripeGet<T>(apiKey: string, path: string): Promise<T | null> {
 
 function operationRef(refund: StripeRefund): string | null {
   return refund.metadata?.operation_id ?? refund.metadata?.idempotency_key ?? null;
+}
+
+/** A refund as read from Stripe, with no customer identity attached. */
+export interface SampledRefund {
+  refund_id: string;
+  charge_id: string | null;
+  amount_cents: number;
+  currency: string;
+  status: string;
+  operation_ref: string | null;
+}
+
+/**
+ * Read the most recent refunds on the account. Used by the audit, which scores an
+ * account without a claim to check against, so it needs the refunds themselves
+ * rather than a lookup by id.
+ */
+export async function sampleStripeRefunds(
+  apiKey: string,
+  limit: number
+): Promise<SampledRefund[]> {
+  const listing = await stripeGet<{ data: StripeRefund[] }>(
+    apiKey,
+    `/v1/refunds?limit=${Math.min(Math.max(limit, 1), 100)}`
+  );
+  return (listing?.data ?? []).map((r) => ({
+    refund_id: r.id,
+    charge_id: r.charge,
+    amount_cents: r.amount,
+    currency: r.currency,
+    status: r.status,
+    operation_ref: operationRef(r),
+  }));
 }
 
 export async function observeStripeRefund(

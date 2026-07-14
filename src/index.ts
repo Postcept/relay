@@ -7,6 +7,7 @@
 //   postcept-relay observe refund --operation op_1 --refund-id re_x
 //   postcept-relay flush
 //   postcept-relay run            # periodic flush + health endpoint
+//   postcept-relay audit          # score recent refunds, key never leaves this box
 //
 // Environment:
 //   POSTCEPT_API_URL        default https://api.postcept.com
@@ -21,11 +22,11 @@
 //   RELAY_HEALTH_PORT       health endpoint port for `run`, default 8477
 
 import { createServer } from "node:http";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { buildEnvelope, keyIdFor, publicKeyFromSeed, type ObservationEnvelope } from "./envelope.js";
 import { Outbox } from "./queue.js";
 import { observeMockRefund } from "./connectors/mock.js";
-import { observeStripeRefund } from "./connectors/stripe.js";
+import { observeStripeRefund, sampleStripeRefunds } from "./connectors/stripe.js";
 
 const API_URL = (process.env.POSTCEPT_API_URL || "https://api.postcept.com").replace(/\/$/, "");
 const DATA_DIR = process.env.POSTCEPT_RELAY_DATA || "./postcept-relay-data";
@@ -158,17 +159,72 @@ async function cmdRun(): Promise<void> {
   }
 }
 
+/**
+ * Score the account's recent refunds without handing anyone the key.
+ *
+ * The refunds are read here, in this process, with the key that is already on this
+ * machine. Only the facts go to Postcept, which scores them and signs the badge.
+ * No account, no API key, nothing stored.
+ */
+async function cmdAudit(): Promise<void> {
+  const limit = Number(flag("--limit") ?? "25");
+  const label = flag("--label") ?? undefined;
+  const apiKey = required("STRIPE_API_KEY");
+
+  const refunds = await sampleStripeRefunds(apiKey, limit);
+  if (refunds.length === 0) {
+    console.log("No refunds found on this account, so there is nothing to audit yet.");
+    return;
+  }
+
+  // A stable, non-secret fingerprint of the account. The key itself never leaves.
+  const accountRef = createHash("sha256").update(apiKey).digest("hex").slice(0, 12);
+
+  const res = await fetch(`${API_URL}/v1/vcr-audit/observed`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      connector: "stripe",
+      account_ref: accountRef,
+      refunds,
+      agent_label: label,
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`Audit failed: HTTP ${res.status} ${await res.text()}`);
+  }
+
+  const report = (await res.json()) as {
+    sampled: number;
+    vcr: { verified: number; incomplete: number; duplicated: number; verified_completion_rate: number };
+    findings: { refund_id: string; result: string; detail: string }[];
+    badge: unknown;
+  };
+  const rate = (report.vcr.verified_completion_rate * 100).toFixed(1);
+  console.log(`Sampled ${report.sampled} recent refunds on ${accountRef}.`);
+  console.log(`Verified Completion Rate: ${rate}%`);
+  console.log(
+    `  verified ${report.vcr.verified}, incomplete ${report.vcr.incomplete}, duplicated ${report.vcr.duplicated}`
+  );
+  for (const f of report.findings.filter((x) => x.result !== "verified")) {
+    console.log(`  ${f.result.padEnd(11)} ${f.refund_id}  ${f.detail}`);
+  }
+  console.log("\nSigned badge (verify it with @postcept/receipt):");
+  console.log(JSON.stringify(report.badge, null, 2));
+}
+
 const command = process.argv[2];
 const commands: Record<string, () => Promise<void>> = {
   keygen: cmdKeygen,
   observe: cmdObserve,
   flush: cmdFlush,
   run: cmdRun,
+  audit: cmdAudit,
 };
 
 const handler = commands[command ?? ""];
 if (!handler) {
-  console.error("Usage: postcept-relay <keygen | observe | flush | run>");
+  console.error("Usage: postcept-relay <keygen | observe | flush | run | audit>");
   process.exit(1);
 }
 handler().catch((err) => {
