@@ -26,7 +26,7 @@ jobs:
       - name: Generate SBOM
         run: npm sbom --sbom-format cyclonedx --omit dev > sbom.cyclonedx.json
       - name: Attach SBOM to the release
-        run: gh release upload "${{ github.event.release.tag_name }}" sbom.cyclonedx.json
+        run: gh release upload "${{ github.event.release.tag_name }}" sbom.cyclonedx.json --clobber
         env:
           GH_TOKEN: ${{ github.token }}
       - run: npm publish --access public --provenance
