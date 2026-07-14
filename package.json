@@ -1,6 +1,6 @@
 {
   "name": "@postcept/relay",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Customer-side relay for Postcept. Reads your system of record with credentials that never leave your environment, signs what it saw as an observation envelope, and submits it for verification. Postcept judges completion without holding your provider keys.",
   "license": "MIT",
   "author": "Postcept",
