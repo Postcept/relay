@@ -202,7 +202,7 @@ async function cmdAudit(): Promise<void> {
   };
   const rate = (report.vcr.verified_completion_rate * 100).toFixed(1);
   console.log(`Sampled ${report.sampled} recent refunds on ${accountRef}.`);
-  console.log(`Verified Completion Rate: ${rate}%`);
+  console.log(`Refund integrity: ${rate}% of sampled refunds verified settled`);
   console.log(
     `  verified ${report.vcr.verified}, incomplete ${report.vcr.incomplete}, duplicated ${report.vcr.duplicated}`
   );
